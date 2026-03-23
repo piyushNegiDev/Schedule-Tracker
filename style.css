@@ -5,28 +5,90 @@
 }
 body {
   padding: 1rem;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  /* align-items: center; */
-  /* justify-content: space-between; */
-  /* gap: 5rem; */
 }
 header {
   text-align: center;
   margin-bottom: 30px;
 }
 .events {
-  /* align-self: flex-start; */
-
   display: flex;
   justify-content: space-between;
+  overflow-x: auto;
+  /* align-items: center; */
 }
 #dateRow {
-  display: flex;
-  /* justify-content: space-between; */
-  gap: 15px;
   font-size: 22px;
 }
+
+th,
+td {
+  border: 1px solid #ddd;
+  text-align: center;
+  padding: 5px;
+}
+
+td:first-child,
+th:first-child {
+  width: 120px;
+  text-align: left;
+}
+
+tr:hover {
+  background: #f2f2f2;
+}
+
+table {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+th,
+td {
+  width: 35px;
+}
+
 .addBtnDiv {
+  display: flex;
+  justify-content: center;
+}
+
+.addBtnDiv button {
+  padding: 0.5rem 1rem;
+  margin-top: 30px;
+
+  border-radius: 1rem;
+  border: none;
+
+  font-size: 1rem;
+  color: white;
+  background-color: black;
+}
+
+.progressGraph {
+  margin-top: 30px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 150px;
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.bar {
+  width: 20px;
+  background: black;
+  border-radius: 4px;
+}
+
+.graphWrapper {
+  width: 600px;
+  margin: 30px auto;
+}
+
+#progressChart {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
 }

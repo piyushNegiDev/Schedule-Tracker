@@ -16,10 +16,11 @@
         <thead>
           <tr id="dateRow">
             <th>Date</th>
+
             <!--  -->
           </tr>
         </thead>
-        <tbody>
+        <tbody id="eventBody">
           <tr id="eventRow">
             <!--  -->
           </tr>
@@ -30,8 +31,12 @@
 
     <div class="addBtnDiv"><button>+ Add Event</button></div>
 
-    <div class="progressGraph"></div>
+    <!-- <canvas id="progressChart"></canvas> -->
+    <div class="graphWrapper">
+      <canvas id="progressChart"></canvas>
+    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
