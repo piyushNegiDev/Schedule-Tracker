@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schedule Tracker SaaS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <section id="authView" class="auth-shell">
+        <div class="auth-intro card">
+          <p class="eyebrow">Cloud workspace</p>
+          <h1>Schedule Tracker</h1>
+          <p class="subtitle">
+            Sign in to access your monthly plans from any device with secure,
+            account-based storage.
+          </p>
+          <ul class="feature-list">
+            <li>JWT authentication with user-specific data</li>
+            <li>MongoDB-backed monthly event tracking</li>
+            <li>Same planning workflow, now synced across devices</li>
+          </ul>
+        </div>
+
+        <div class="auth-panel card">
+          <div class="auth-tabs" role="tablist" aria-label="Authentication">
+            <button id="loginTab" class="auth-tab active" type="button">Login</button>
+            <button id="signupTab" class="auth-tab" type="button">Signup</button>
+          </div>
+
+          <form id="loginForm" class="auth-form">
+            <h2>Welcome back</h2>
+            <label class="field">
+              <span>Email</span>
+              <input id="loginEmail" type="email" autocomplete="email" required />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input
+                id="loginPassword"
+                type="password"
+                minlength="8"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+            <button class="primary-button" type="submit">Login</button>
+          </form>
+
+          <form id="signupForm" class="auth-form hidden">
+            <h2>Create your account</h2>
+            <label class="field">
+              <span>Email</span>
+              <input id="signupEmail" type="email" autocomplete="email" required />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input
+                id="signupPassword"
+                type="password"
+                minlength="8"
+                autocomplete="new-password"
+                required
+              />
+            </label>
+            <button class="primary-button" type="submit">Signup</button>
+          </form>
+
+          <p id="authMessage" class="form-message" aria-live="polite"></p>
+          <p class="auth-note">
+            Token storage is configured with <code>localStorage</code> for this build.
+            For production, you can switch to secure HTTP-only cookies if you want
+            stronger browser-side protection.
+          </p>
+        </div>
+      </section>
+
+      <div id="appView" class="app-shell hidden">
+        <header class="topbar card">
+          <div class="hero-copy">
+            <p class="eyebrow">Productivity system</p>
+            <h1>Schedule Tracker</h1>
+            <p class="subtitle">
+              Track recurring habits, watch your momentum, and stay on top of each
+              month with a cleaner planning workflow.
+            </p>
+          </div>
+
+          <div class="topbar-actions">
+            <div class="user-chip">
+              <span>Signed in as</span>
+              <strong id="userEmail">-</strong>
+            </div>
+
+            <label class="field">
+              <span>Month</span>
+              <input type="month" id="calendar" />
+            </label>
+
+            <button
+              class="icon-button"
+              id="themeToggle"
+              type="button"
+              aria-label="Toggle dark mode"
+            >
+              <span class="theme-icon" aria-hidden="true">Theme</span>
+            </button>
+
+            <button class="secondary-button" id="logoutBtn" type="button">Logout</button>
+          </div>
+        </header>
+
+        <main class="dashboard">
+          <section class="overview-grid">
+            <article class="stat-card card">
+              <p class="stat-label">Total completion</p>
+              <h2 id="totalCompletion">0%</h2>
+              <p id="completionInsight" class="stat-detail">
+                Your monthly completion snapshot will appear here.
+              </p>
+            </article>
+
+            <article class="stat-card card">
+              <p class="stat-label">Weekly average</p>
+              <h2 id="weeklyAverage">0%</h2>
+              <p id="weeklyInsight" class="stat-detail">
+                Based on your current month activity.
+              </p>
+            </article>
+
+            <article class="stat-card card">
+              <p class="stat-label">Best day</p>
+              <h2 id="bestDay">-</h2>
+              <p id="bestDayInsight" class="stat-detail">
+                The strongest day of the month will show here.
+              </p>
+            </article>
+
+            <article class="stat-card card">
+              <p class="stat-label">Events</p>
+              <h2 id="eventCount">0</h2>
+              <p id="eventCountInsight" class="stat-detail">
+                Active habits scheduled this month.
+              </p>
+            </article>
+          </section>
+
+          <section class="workspace-grid">
+            <section class="panel card controls-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Manage habits</p>
+                  <h2>Add and organize events</h2>
+                </div>
+              </div>
+
+              <form id="eventForm" class="event-form">
+                <label class="field">
+                  <span>Event name</span>
+                  <input
+                    type="text"
+                    id="eventName"
+                    maxlength="40"
+                    placeholder="Gym, Reading, Deep Work"
+                    required
+                  />
+                </label>
+
+                <label class="field field-small">
+                  <span>Monthly goal</span>
+                  <input
+                    type="number"
+                    id="eventGoal"
+                    min="1"
+                    placeholder="20"
+                    required
+                  />
+                </label>
+
+                <button class="primary-button" id="submitEventBtn" type="submit">
+                  Add event
+                </button>
+              </form>
+
+              <div class="supporting-actions">
+                <button class="secondary-button" id="exportBtn" type="button">
+                  Export JSON
+                </button>
+
+                <label class="secondary-button file-button" for="importInput">
+                  Import JSON
+                </label>
+                <input id="importInput" type="file" accept=".json,application/json" />
+              </div>
+
+              <p id="formMessage" class="form-message" aria-live="polite"></p>
+              <p id="syncStatus" class="panel-meta">
+                Your data sync status will appear here.
+              </p>
+            </section>
+
+            <section class="panel card chart-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Progress analytics</p>
+                  <h2>Daily completion trend</h2>
+                </div>
+                <p class="goal-badge" id="goalBadge">Goal line: 0%</p>
+              </div>
+
+              <div class="chart-wrap">
+                <canvas id="progressChart"></canvas>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel card">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Month planner</p>
+                <h2>Daily event tracker</h2>
+              </div>
+              <p class="panel-meta" id="monthSummary">No events yet</p>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="tracker-table">
+                <thead>
+                  <tr id="dateRow">
+                    <th class="sticky-col">Event</th>
+                  </tr>
+                </thead>
+                <tbody id="eventBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

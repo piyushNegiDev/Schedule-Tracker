@@ -1,7 +1,24 @@
-const STORAGE_KEY = "trackerData.v2";
-const LEGACY_STORAGE_KEY = "trackerData";
+const TOKEN_STORAGE_KEY = "scheduleTracker.authToken";
 const THEME_STORAGE_KEY = "trackerTheme";
+const LEGACY_STORAGE_KEY = "trackerData";
+const LEGACY_STORAGE_KEY_V2 = "trackerData.v2";
+const API_BASE_URL = window.APP_CONFIG?.API_BASE_URL || "http://localhost:5000/api";
+
 const elements = {
+  authView: document.querySelector("#authView"),
+  appView: document.querySelector("#appView"),
+  loginTab: document.querySelector("#loginTab"),
+  signupTab: document.querySelector("#signupTab"),
+  loginForm: document.querySelector("#loginForm"),
+  signupForm: document.querySelector("#signupForm"),
+  loginEmail: document.querySelector("#loginEmail"),
+  loginPassword: document.querySelector("#loginPassword"),
+  signupEmail: document.querySelector("#signupEmail"),
+  signupPassword: document.querySelector("#signupPassword"),
+  authMessage: document.querySelector("#authMessage"),
+  logoutBtn: document.querySelector("#logoutBtn"),
+  userEmail: document.querySelector("#userEmail"),
+  syncStatus: document.querySelector("#syncStatus"),
   calendar: document.querySelector("#calendar"),
   dateRow: document.querySelector("#dateRow"),
   eventBody: document.querySelector("#eventBody"),
@@ -26,29 +43,34 @@ const elements = {
 };
 
 const appState = {
-  data: loadData(),
+  token: localStorage.getItem(TOKEN_STORAGE_KEY) || "",
+  currentUser: null,
+  data: { months: {} },
   chart: null,
   dragEventId: null,
 };
 
-function getSelectedMonthDays() {
-  return getDaysInMonth(elements.calendar.value);
+function createEmptyMonth() {
+  return { events: [] };
 }
 
-function loadData() {
-  const savedV2 = localStorage.getItem(STORAGE_KEY);
-  if (savedV2) {
-    return normalizeData(JSON.parse(savedV2));
-  }
+function createMonthMap(months) {
+  const mappedMonths = {};
 
-  const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-  if (legacy) {
-    const migrated = migrateLegacyData(JSON.parse(legacy));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-    return migrated;
-  }
+  (months || []).forEach((monthData) => {
+    const monthKey = monthData.month;
+    const days = getDaysInMonth(monthKey);
+    mappedMonths[monthKey] = {
+      events: (monthData.events || []).map((event, index) => ({
+        id: event.id,
+        name: String(event.name || `Event ${index + 1}`),
+        goal: clampGoal(event.goal, days),
+        checks: resizeChecks(event.days || event.checks, days),
+      })),
+    };
+  });
 
-  return { months: {} };
+  return { months: mappedMonths };
 }
 
 function normalizeData(data) {
@@ -62,7 +84,7 @@ function normalizeData(data) {
       id: event.id || createId(),
       name: String(event.name || `Event ${index + 1}`),
       goal: clampGoal(event.goal, daysInMonth),
-      checks: Array.isArray(event.checks) ? event.checks.map(Boolean) : [],
+      checks: resizeChecks(event.checks || event.days, daysInMonth),
     }));
   });
 
@@ -86,20 +108,69 @@ function migrateLegacyData(legacyData) {
   return normalizeData(migrated);
 }
 
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.data));
+function getLegacyLocalData() {
+  const savedV2 = localStorage.getItem(LEGACY_STORAGE_KEY_V2);
+  if (savedV2) {
+    try {
+      return normalizeData(JSON.parse(savedV2));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (legacy) {
+    try {
+      return migrateLegacyData(JSON.parse(legacy));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function setToken(token) {
+  appState.token = token || "";
+
+  if (appState.token) {
+    localStorage.setItem(TOKEN_STORAGE_KEY, appState.token);
+  } else {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+  }
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (appState.token) {
+    headers.Authorization = `Bearer ${appState.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json") ? await response.json() : null;
+
+  if (!response.ok) {
+    throw new Error(payload?.message || "Request failed.");
+  }
+
+  return payload;
+}
+
+function getSelectedMonthDays() {
+  return getDaysInMonth(elements.calendar.value);
 }
 
 function createId() {
   return `event-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function clampGoal(goal, maxDays = getSelectedMonthDays()) {
-  const numericGoal = Number(goal);
-  if (!Number.isFinite(numericGoal) || numericGoal < 1) {
-    return 1;
-  }
-  return Math.min(Math.round(numericGoal), maxDays);
 }
 
 function getTodayKey() {
@@ -122,10 +193,18 @@ function resizeChecks(checks, days) {
   return nextChecks;
 }
 
+function clampGoal(goal, maxDays = getSelectedMonthDays()) {
+  const numericGoal = Number(goal);
+  if (!Number.isFinite(numericGoal) || numericGoal < 1) {
+    return 1;
+  }
+  return Math.min(Math.round(numericGoal), maxDays);
+}
+
 function getCurrentMonthData() {
   const monthKey = elements.calendar.value;
   if (!appState.data.months[monthKey]) {
-    appState.data.months[monthKey] = { events: [] };
+    appState.data.months[monthKey] = createEmptyMonth();
   }
 
   const month = appState.data.months[monthKey];
@@ -138,6 +217,20 @@ function getCurrentMonthData() {
   }));
 
   return month;
+}
+
+function setSyncStatus(message) {
+  elements.syncStatus.textContent = message;
+}
+
+function showMessage(message, type = "") {
+  elements.formMessage.textContent = message;
+  elements.formMessage.className = `form-message${type ? ` ${type}` : ""}`;
+}
+
+function showAuthMessage(message, type = "") {
+  elements.authMessage.textContent = message;
+  elements.authMessage.className = `form-message${type ? ` ${type}` : ""}`;
 }
 
 function formatMonthLabel(monthKey) {
@@ -186,11 +279,6 @@ function initializeTheme() {
 
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   setTheme(prefersDark ? "dark" : "light");
-}
-
-function showMessage(message, type = "") {
-  elements.formMessage.textContent = message;
-  elements.formMessage.className = `form-message${type ? ` ${type}` : ""}`;
 }
 
 function getDailyProgress(month) {
@@ -261,8 +349,7 @@ function calculateAnalytics(month) {
   const goalPercent = eventCount
     ? Number(
         (
-          month.events.reduce((sum, event) => sum + (event.goal / days) * 100, 0) /
-          eventCount
+          month.events.reduce((sum, event) => sum + (event.goal / days) * 100, 0) / eventCount
         ).toFixed(1)
       )
     : 0;
@@ -495,7 +582,6 @@ function renderChart(analytics) {
 
 function renderApp() {
   const month = getCurrentMonthData();
-  saveData();
   const analytics = calculateAnalytics(month);
   renderDays(analytics.days);
   renderEvents(month);
@@ -510,9 +596,102 @@ function isDuplicateEventName(name, ignoreId = "") {
   );
 }
 
-function addEvent(name, goal) {
+async function loadRemoteData() {
+  const response = await apiRequest("/events");
+  appState.data = createMonthMap(response.months);
+}
+
+async function syncMonthToServer(monthKey) {
+  const monthData = appState.data.months[monthKey] || createEmptyMonth();
+
+  await apiRequest(`/events/month/${monthKey}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      events: monthData.events.map((event) => ({
+        name: event.name,
+        goal: event.goal,
+        days: event.checks,
+      })),
+    }),
+  });
+}
+
+async function maybeMigrateLegacyData() {
+  const legacyData = getLegacyLocalData();
+  if (!legacyData) {
+    return;
+  }
+
+  const hasRemoteData = Object.values(appState.data.months).some(
+    (month) => Array.isArray(month.events) && month.events.length
+  );
+
+  if (hasRemoteData) {
+    return;
+  }
+
+  const shouldImport = window.confirm(
+    "We found tracker data saved locally in this browser. Import it into your account?"
+  );
+
+  if (!shouldImport) {
+    return;
+  }
+
+  appState.data = normalizeData(legacyData);
+  const monthKeys = Object.keys(appState.data.months);
+
+  for (const monthKey of monthKeys) {
+    await syncMonthToServer(monthKey);
+  }
+
+  await loadRemoteData();
+  showMessage("Imported your previous local data into the cloud.", "success");
+  setSyncStatus("Local data migrated to your account.");
+}
+
+function setAuthView(isAuthenticated) {
+  elements.authView.classList.toggle("hidden", isAuthenticated);
+  elements.appView.classList.toggle("hidden", !isAuthenticated);
+}
+
+function resetTrackerView() {
+  appState.data = { months: {} };
+  showMessage("");
+  setSyncStatus("Sign in to load your data.");
+  renderApp();
+}
+
+async function handleAuthenticatedSession() {
+  const response = await apiRequest("/auth/me");
+  appState.currentUser = response.user;
+  elements.userEmail.textContent = response.user.email;
+  setAuthView(true);
+  await loadRemoteData();
+  await maybeMigrateLegacyData();
+  renderApp();
+  setSyncStatus(`Cloud sync active for ${response.user.email}.`);
+}
+
+async function submitAuthForm(path, email, password) {
+  const response = await apiRequest(path, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+
+  setToken(response.token);
+  showAuthMessage(
+    path.includes("signup") ? "Account created successfully." : "Logged in successfully.",
+    "success"
+  );
+  await handleAuthenticatedSession();
+}
+
+async function addEvent(name, goal) {
   const trimmedName = name.trim();
+  const month = elements.calendar.value;
   const days = getSelectedMonthDays();
+
   if (!trimmedName) {
     showMessage("Please enter an event name.", "error");
     return;
@@ -529,20 +708,30 @@ function addEvent(name, goal) {
     return;
   }
 
-  getCurrentMonthData().events.push({
-    id: createId(),
-    name: trimmedName,
-    goal: clampGoal(goal, days),
-    checks: resizeChecks([], days),
+  const response = await apiRequest("/events", {
+    method: "POST",
+    body: JSON.stringify({
+      month,
+      name: trimmedName,
+      goal: clampGoal(goal, days),
+      days: resizeChecks([], days),
+    }),
   });
 
-  saveData();
+  getCurrentMonthData().events.push({
+    id: response.event.id,
+    name: response.event.name,
+    goal: response.event.goal,
+    checks: resizeChecks(response.event.days, days),
+  });
+
   renderApp();
   elements.eventForm.reset();
   showMessage(`Added "${trimmedName}" successfully.`, "success");
+  setSyncStatus(`Saved "${trimmedName}" to the cloud.`);
 }
 
-function updateEventName(eventId) {
+async function updateEventName(eventId) {
   const month = getCurrentMonthData();
   const event = month.events.find((item) => item.id === eventId);
   const days = getSelectedMonthDays();
@@ -577,14 +766,22 @@ function updateEventName(eventId) {
     return;
   }
 
-  event.name = trimmedName;
-  event.goal = clampGoal(validatedGoal, days);
-  saveData();
+  const response = await apiRequest(`/events/${eventId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      name: trimmedName,
+      goal: clampGoal(validatedGoal, days),
+    }),
+  });
+
+  event.name = response.event.name;
+  event.goal = response.event.goal;
   renderApp();
   showMessage(`Updated "${trimmedName}" with a ${event.goal}-day goal.`, "success");
+  setSyncStatus(`Saved updates for "${trimmedName}".`);
 }
 
-function deleteEvent(eventId) {
+async function deleteEvent(eventId) {
   const month = getCurrentMonthData();
   const event = month.events.find((item) => item.id === eventId);
   if (!event) {
@@ -595,23 +792,40 @@ function deleteEvent(eventId) {
     return;
   }
 
+  await apiRequest(`/events/${eventId}`, { method: "DELETE" });
   month.events = month.events.filter((item) => item.id !== eventId);
-  saveData();
   renderApp();
   showMessage(`Deleted "${event.name}".`, "success");
+  setSyncStatus(`Removed "${event.name}" from the cloud.`);
 }
 
-function toggleCheck(eventId, dayIndex, checked) {
+async function toggleCheck(eventId, dayIndex, checked) {
   const event = getCurrentMonthData().events.find((item) => item.id === eventId);
   if (!event) {
     return;
   }
+
   event.checks[dayIndex] = checked;
-  saveData();
   renderApp();
+
+  try {
+    await apiRequest(`/events/${eventId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        dayIndex,
+        checked,
+      }),
+    });
+    setSyncStatus(`Synced day ${dayIndex + 1} for "${event.name}".`);
+  } catch (error) {
+    event.checks[dayIndex] = !checked;
+    renderApp();
+    showMessage(error.message, "error");
+    setSyncStatus("Sync failed. The last change was rolled back.");
+  }
 }
 
-function reorderEvents(sourceId, targetId) {
+async function reorderEvents(sourceId, targetId) {
   if (!sourceId || !targetId || sourceId === targetId) {
     return;
   }
@@ -625,8 +839,19 @@ function reorderEvents(sourceId, targetId) {
 
   const [movedEvent] = month.events.splice(fromIndex, 1);
   month.events.splice(toIndex, 0, movedEvent);
-  saveData();
   renderApp();
+
+  try {
+    await syncMonthToServer(elements.calendar.value);
+    await loadRemoteData();
+    renderApp();
+    setSyncStatus("Saved the new event order.");
+  } catch (error) {
+    showMessage(error.message, "error");
+    await loadRemoteData();
+    renderApp();
+    setSyncStatus("Reorder failed. Data was refreshed from the server.");
+  }
 }
 
 function exportData() {
@@ -642,23 +867,40 @@ function exportData() {
   showMessage("Exported tracker data as JSON.", "success");
 }
 
-function importData(file) {
+async function importData(file) {
   if (!file) {
     return;
   }
 
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
-      appState.data = normalizeData(JSON.parse(String(reader.result || "")));
-      saveData();
+      const importedData = normalizeData(JSON.parse(String(reader.result || "")));
+      appState.data = importedData;
+
+      for (const monthKey of Object.keys(importedData.months)) {
+        await syncMonthToServer(monthKey);
+      }
+
+      await loadRemoteData();
       renderApp();
       showMessage("Imported tracker data successfully.", "success");
+      setSyncStatus("Imported JSON data into your account.");
     } catch (error) {
-      showMessage("Import failed. Please choose a valid JSON export.", "error");
+      showMessage(error.message || "Import failed. Please choose a valid JSON export.", "error");
     }
   };
   reader.readAsText(file);
+}
+
+async function refreshCurrentMonth() {
+  try {
+    await loadRemoteData();
+    renderApp();
+    setSyncStatus(`Loaded ${formatMonthLabel(elements.calendar.value)} from the cloud.`);
+  } catch (error) {
+    showMessage(error.message, "error");
+  }
 }
 
 function handleTableClick(event) {
@@ -723,16 +965,82 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function showLoginForm() {
+  elements.loginForm.classList.remove("hidden");
+  elements.signupForm.classList.add("hidden");
+  elements.loginTab.classList.add("active");
+  elements.signupTab.classList.remove("active");
+  showAuthMessage("");
+}
+
+function showSignupForm() {
+  elements.signupForm.classList.remove("hidden");
+  elements.loginForm.classList.add("hidden");
+  elements.signupTab.classList.add("active");
+  elements.loginTab.classList.remove("active");
+  showAuthMessage("");
+}
+
+function logout() {
+  setToken("");
+  appState.currentUser = null;
+  elements.userEmail.textContent = "-";
+  setAuthView(false);
+  resetTrackerView();
+  showAuthMessage("You have been logged out.", "success");
+}
+
 function bindEvents() {
-  elements.calendar.addEventListener("change", () => {
-    showMessage("");
-    updateGoalInputRange();
-    renderApp();
+  elements.loginTab.addEventListener("click", showLoginForm);
+  elements.signupTab.addEventListener("click", showSignupForm);
+
+  elements.loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    try {
+      await submitAuthForm(
+        "/auth/login",
+        elements.loginEmail.value.trim(),
+        elements.loginPassword.value
+      );
+      elements.loginForm.reset();
+    } catch (error) {
+      showAuthMessage(error.message, "error");
+    }
   });
 
-  elements.eventForm.addEventListener("submit", (event) => {
+  elements.signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    addEvent(elements.eventName.value, elements.eventGoal.value);
+
+    try {
+      await submitAuthForm(
+        "/auth/signup",
+        elements.signupEmail.value.trim(),
+        elements.signupPassword.value
+      );
+      elements.signupForm.reset();
+    } catch (error) {
+      showAuthMessage(error.message, "error");
+    }
+  });
+
+  elements.logoutBtn.addEventListener("click", logout);
+
+  elements.calendar.addEventListener("change", async () => {
+    showMessage("");
+    updateGoalInputRange();
+    await refreshCurrentMonth();
+  });
+
+  elements.eventForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    try {
+      await addEvent(elements.eventName.value, elements.eventGoal.value);
+    } catch (error) {
+      showMessage(error.message, "error");
+      setSyncStatus("Could not save the new event.");
+    }
   });
 
   elements.themeToggle.addEventListener("click", () => {
@@ -754,12 +1062,28 @@ function bindEvents() {
   elements.eventBody.addEventListener("dragend", handleDragEnd);
 }
 
-function initializeApp() {
+async function initializeAuth() {
+  if (!appState.token) {
+    setAuthView(false);
+    resetTrackerView();
+    return;
+  }
+
+  try {
+    await handleAuthenticatedSession();
+  } catch (error) {
+    logout();
+    showAuthMessage("Your session expired. Please log in again.", "error");
+  }
+}
+
+async function initializeApp() {
   setDefaultMonth();
   initializeTheme();
   updateGoalInputRange();
   bindEvents();
   renderApp();
+  await initializeAuth();
 }
 
 initializeApp();
