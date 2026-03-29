@@ -17,8 +17,8 @@ This project now has a split frontend and backend structure:
 5. Serve the frontend from `client/`
    - Example with VS Code Live Server: open `client/index.html`
    - Or any static server that serves `client/`
-6. If your frontend runs on a different origin, update `CLIENT_ORIGIN` in `server/.env`
-7. If your API runs somewhere other than `http://localhost:5000/api`, update `client/config.js`
+6. If your frontend runs on a different origin, set `CLIENT_ORIGIN` in `server/.env`
+7. If your API is hosted separately from the frontend, update `client/config.js`
 
 ## Auth and persistence
 
@@ -28,4 +28,6 @@ This project now has a split frontend and backend structure:
 - Events: authenticated routes under `GET/POST/PATCH/DELETE /api/events`
 - Month import sync: `PUT /api/events/month/:month`
 
-The frontend currently stores the JWT in `localStorage` for simplicity. In production, you can swap this to secure HTTP-only cookies if desired.
+The frontend defaults to `"/api"` so production works cleanly when the Express server also serves `client/`.
+
+The frontend currently stores the JWT in `localStorage` for simplicity. In production, you can swap this to secure HTTP-only cookies if you want stronger browser-side protection.

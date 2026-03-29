@@ -7,14 +7,15 @@ const {
   replaceMonth,
 } = require("../controllers/eventController");
 const { protect } = require("../middleware/authMiddleware");
+const asyncHandler = require("../middleware/asyncHandler");
 
 const router = express.Router();
 
 router.use(protect);
-router.get("/", getEvents);
-router.post("/", createEvent);
-router.put("/month/:month", replaceMonth);
-router.patch("/:id", updateEvent);
-router.delete("/:id", deleteEvent);
+router.get("/", asyncHandler(getEvents));
+router.post("/", asyncHandler(createEvent));
+router.put("/month/:month", asyncHandler(replaceMonth));
+router.patch("/:id", asyncHandler(updateEvent));
+router.delete("/:id", asyncHandler(deleteEvent));
 
 module.exports = router;

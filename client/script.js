@@ -2,7 +2,7 @@ const TOKEN_STORAGE_KEY = "scheduleTracker.authToken";
 const THEME_STORAGE_KEY = "trackerTheme";
 const LEGACY_STORAGE_KEY = "trackerData";
 const LEGACY_STORAGE_KEY_V2 = "trackerData.v2";
-const API_BASE_URL = window.APP_CONFIG?.API_BASE_URL || "http://localhost:5000/api";
+const API_BASE_URL = String(window.APP_CONFIG?.API_BASE_URL || "/api").replace(/\/+$/, "");
 
 const elements = {
   authView: document.querySelector("#authView"),

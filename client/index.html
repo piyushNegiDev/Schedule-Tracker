@@ -31,15 +31,24 @@
 
         <div class="auth-panel card">
           <div class="auth-tabs" role="tablist" aria-label="Authentication">
-            <button id="loginTab" class="auth-tab active" type="button">Login</button>
-            <button id="signupTab" class="auth-tab" type="button">Signup</button>
+            <button id="loginTab" class="auth-tab active" type="button">
+              Login
+            </button>
+            <button id="signupTab" class="auth-tab" type="button">
+              Signup
+            </button>
           </div>
 
           <form id="loginForm" class="auth-form">
             <h2>Welcome back</h2>
             <label class="field">
               <span>Email</span>
-              <input id="loginEmail" type="email" autocomplete="email" required />
+              <input
+                id="loginEmail"
+                type="email"
+                autocomplete="email"
+                required
+              />
             </label>
             <label class="field">
               <span>Password</span>
@@ -58,7 +67,12 @@
             <h2>Create your account</h2>
             <label class="field">
               <span>Email</span>
-              <input id="signupEmail" type="email" autocomplete="email" required />
+              <input
+                id="signupEmail"
+                type="email"
+                autocomplete="email"
+                required
+              />
             </label>
             <label class="field">
               <span>Password</span>
@@ -75,9 +89,9 @@
 
           <p id="authMessage" class="form-message" aria-live="polite"></p>
           <p class="auth-note">
-            Token storage is configured with <code>localStorage</code> for this build.
-            For production, you can switch to secure HTTP-only cookies if you want
-            stronger browser-side protection.
+            Token storage is configured with <code>localStorage</code> for this
+            build. For production, you can switch to secure HTTP-only cookies if
+            you want stronger browser-side protection.
           </p>
         </div>
       </section>
@@ -88,8 +102,8 @@
             <p class="eyebrow">Productivity system</p>
             <h1>Schedule Tracker</h1>
             <p class="subtitle">
-              Track recurring habits, watch your momentum, and stay on top of each
-              month with a cleaner planning workflow.
+              Track recurring habits, watch your momentum, and stay on top of
+              each month with a cleaner planning workflow.
             </p>
           </div>
 
@@ -113,7 +127,9 @@
               <span class="theme-icon" aria-hidden="true">Theme</span>
             </button>
 
-            <button class="secondary-button" id="logoutBtn" type="button">Logout</button>
+            <button class="secondary-button" id="logoutBtn" type="button">
+              Logout
+            </button>
           </div>
         </header>
 
@@ -184,7 +200,11 @@
                   />
                 </label>
 
-                <button class="primary-button" id="submitEventBtn" type="submit">
+                <button
+                  class="primary-button"
+                  id="submitEventBtn"
+                  type="submit"
+                >
                   Add event
                 </button>
               </form>
@@ -197,7 +217,11 @@
                 <label class="secondary-button file-button" for="importInput">
                   Import JSON
                 </label>
-                <input id="importInput" type="file" accept=".json,application/json" />
+                <input
+                  id="importInput"
+                  type="file"
+                  accept=".json,application/json"
+                />
               </div>
 
               <p id="formMessage" class="form-message" aria-live="polite"></p>

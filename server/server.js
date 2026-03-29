@@ -11,13 +11,23 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const clientOrigin = process.env.CLIENT_ORIGIN || "*";
+const clientOrigin = process.env.CLIENT_ORIGIN;
 
-app.use(
-  cors({
-    origin: clientOrigin === "*" ? true : clientOrigin,
-  })
-);
+function validateConfig() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not set.");
+  }
+}
+
+validateConfig();
+
+if (clientOrigin) {
+  app.use(
+    cors({
+      origin: clientOrigin,
+    })
+  );
+}
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {
