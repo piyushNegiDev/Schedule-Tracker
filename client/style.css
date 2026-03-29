@@ -52,6 +52,11 @@ body.dark {
   --shadow: 0 24px 50px rgba(2, 6, 23, 0.45);
 }
 
+/* Fix 4: dark theme attribute support */
+body[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 * {
   min-width: 0;
   box-sizing: border-box;
@@ -402,6 +407,19 @@ input {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-strong);
+}
+
+/* Fix 5: mobile table scroll */
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+/* Fix 5: mobile table scroll */
+.table-scroll-wrapper table {
+  min-width: 600px;
+  width: 100%;
 }
 
 .tracker-table {

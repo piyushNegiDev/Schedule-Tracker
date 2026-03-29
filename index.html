@@ -88,11 +88,6 @@
           </form>
 
           <p id="authMessage" class="form-message" aria-live="polite"></p>
-          <p class="auth-note">
-            Token storage is configured with <code>localStorage</code> for this
-            build. For production, you can switch to secure HTTP-only cookies if
-            you want stronger browser-side protection.
-          </p>
         </div>
       </section>
 
@@ -225,6 +220,7 @@
               </div>
 
               <p id="formMessage" class="form-message" aria-live="polite"></p>
+              <!-- Fix 2: functional sync status indicator -->
               <p id="syncStatus" class="panel-meta">
                 Your data sync status will appear here.
               </p>
@@ -251,17 +247,31 @@
                 <p class="panel-kicker">Month planner</p>
                 <h2>Daily event tracker</h2>
               </div>
-              <p class="panel-meta" id="monthSummary">No events yet</p>
+              <p class="panel-meta" id="monthSummary">Month summary will appear here.</p>
             </div>
 
-            <div class="table-wrapper">
+            <!-- Fix 5: mobile planner table scroll wrapper -->
+            <div class="table-wrapper table-scroll-wrapper">
               <table class="tracker-table">
                 <thead>
                   <tr id="dateRow">
                     <th class="sticky-col">Event</th>
                   </tr>
                 </thead>
-                <tbody id="eventBody"></tbody>
+                <tbody id="eventBody">
+                  <!-- Fix 3: planner empty state call-to-action -->
+                  <tr class="empty-state-row">
+                    <td
+                      colspan="100%"
+                      style="text-align: center; padding: 24px 0; border: none;"
+                    >
+                      <div style="font-size: 14px; color: #888;">No events yet</div>
+                      <div style="font-size: 13px; color: #aaa; margin-top: 6px;">
+                        Add your first habit using the form above ↑
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </section>

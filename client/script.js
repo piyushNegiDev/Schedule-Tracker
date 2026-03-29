@@ -1,5 +1,6 @@
 const TOKEN_STORAGE_KEY = "scheduleTracker.authToken";
-const THEME_STORAGE_KEY = "trackerTheme";
+const THEME_STORAGE_KEY = "schedule-tracker-theme";
+const LEGACY_THEME_STORAGE_KEY = "trackerTheme";
 const LEGACY_STORAGE_KEY = "trackerData";
 const LEGACY_STORAGE_KEY_V2 = "trackerData.v2";
 const API_BASE_URL = String(window.APP_CONFIG?.API_BASE_URL || "/api").replace(/\/+$/, "");
@@ -48,6 +49,7 @@ const appState = {
   data: { months: {} },
   chart: null,
   dragEventId: null,
+  syncStatusTimeoutId: null,
 };
 
 function createEmptyMonth() {
@@ -145,21 +147,46 @@ async function apiRequest(path, options = {}) {
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
+  // Fix 2: update sync status around every write request to the backend
+  const method = String(options.method || "GET").toUpperCase();
+  const isWriteRequest = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
 
   if (appState.token) {
     headers.Authorization = `Bearer ${appState.token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  if (isWriteRequest) {
+    clearTimeout(appState.syncStatusTimeoutId);
+    setSyncStatus("saving");
+  }
+
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    if (isWriteRequest) {
+      setSyncStatus("error");
+    }
+    throw error;
+  }
 
   const contentType = response.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await response.json() : null;
 
   if (!response.ok) {
+    if (isWriteRequest) {
+      setSyncStatus("error");
+    }
     throw new Error(payload?.message || "Request failed.");
+  }
+
+  if (isWriteRequest) {
+    setSyncStatus("saved");
+    appState.syncStatusTimeoutId = window.setTimeout(() => setSyncStatus("idle"), 3000);
   }
 
   return payload;
@@ -219,8 +246,22 @@ function getCurrentMonthData() {
   return month;
 }
 
-function setSyncStatus(message) {
-  elements.syncStatus.textContent = message;
+// Fix 2: functional sync status indicator
+function setSyncStatus(state) {
+  const el = document.getElementById("syncStatus");
+  if (!el) return;
+
+  const map = {
+    saving: { text: "Saving...", color: "#888888" },
+    saved: { text: "Saved \u2713", color: "#3B6D11" },
+    error: { text: "Sync error", color: "#A32D2D" },
+    idle: { text: "", color: "transparent" },
+  };
+  const nextState = map[state] ? state : "idle";
+
+  el.textContent = map[nextState].text;
+  el.style.color = map[nextState].color;
+  el.style.fontSize = "13px";
 }
 
 function showMessage(message, type = "") {
@@ -263,22 +304,26 @@ function updateGoalInputRange() {
   }
 }
 
-function setTheme(theme) {
+// Fix 4: persist theme preference across reloads
+function applyTheme(theme) {
   const isDark = theme === "dark";
   document.body.classList.toggle("dark", isDark);
+  document.documentElement.classList.toggle("dark", isDark);
+  document.body.setAttribute("data-theme", isDark ? "dark" : "light");
   localStorage.setItem(THEME_STORAGE_KEY, isDark ? "dark" : "light");
   elements.themeToggle.querySelector(".theme-icon").textContent = isDark ? "Light" : "Dark";
 }
 
 function initializeTheme() {
-  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const savedTheme =
+    localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
   if (savedTheme) {
-    setTheme(savedTheme);
+    applyTheme(savedTheme);
     return;
   }
 
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(prefersDark ? "dark" : "light");
+  applyTheme(prefersDark ? "dark" : "light");
 }
 
 function getDailyProgress(month) {
@@ -400,9 +445,16 @@ function renderEvents(month) {
 
   if (!month.events.length) {
     const emptyRow = document.createElement("tr");
-    emptyRow.innerHTML = `<td class="empty-state" colspan="${
-      days + 1
-    }">Add your first event to start tracking daily progress.</td>`;
+    // Fix 3: planner empty state call-to-action
+    emptyRow.className = "empty-state-row";
+    emptyRow.innerHTML = `
+      <td colspan="100%" style="text-align: center; padding: 24px 0; border: none;">
+        <div style="font-size: 14px; color: #888;">No events yet</div>
+        <div style="font-size: 13px; color: #aaa; margin-top: 6px;">
+          Add your first habit using the form above ↑
+        </div>
+      </td>
+    `;
     elements.eventBody.appendChild(emptyRow);
     return;
   }
@@ -647,7 +699,6 @@ async function maybeMigrateLegacyData() {
 
   await loadRemoteData();
   showMessage("Imported your previous local data into the cloud.", "success");
-  setSyncStatus("Local data migrated to your account.");
 }
 
 function setAuthView(isAuthenticated) {
@@ -658,7 +709,7 @@ function setAuthView(isAuthenticated) {
 function resetTrackerView() {
   appState.data = { months: {} };
   showMessage("");
-  setSyncStatus("Sign in to load your data.");
+  setSyncStatus("idle");
   renderApp();
 }
 
@@ -670,7 +721,7 @@ async function handleAuthenticatedSession() {
   await loadRemoteData();
   await maybeMigrateLegacyData();
   renderApp();
-  setSyncStatus(`Cloud sync active for ${response.user.email}.`);
+  setSyncStatus("idle");
 }
 
 async function submitAuthForm(path, email, password) {
@@ -728,7 +779,6 @@ async function addEvent(name, goal) {
   renderApp();
   elements.eventForm.reset();
   showMessage(`Added "${trimmedName}" successfully.`, "success");
-  setSyncStatus(`Saved "${trimmedName}" to the cloud.`);
 }
 
 async function updateEventName(eventId) {
@@ -778,7 +828,6 @@ async function updateEventName(eventId) {
   event.goal = response.event.goal;
   renderApp();
   showMessage(`Updated "${trimmedName}" with a ${event.goal}-day goal.`, "success");
-  setSyncStatus(`Saved updates for "${trimmedName}".`);
 }
 
 async function deleteEvent(eventId) {
@@ -796,7 +845,6 @@ async function deleteEvent(eventId) {
   month.events = month.events.filter((item) => item.id !== eventId);
   renderApp();
   showMessage(`Deleted "${event.name}".`, "success");
-  setSyncStatus(`Removed "${event.name}" from the cloud.`);
 }
 
 async function toggleCheck(eventId, dayIndex, checked) {
@@ -816,12 +864,10 @@ async function toggleCheck(eventId, dayIndex, checked) {
         checked,
       }),
     });
-    setSyncStatus(`Synced day ${dayIndex + 1} for "${event.name}".`);
   } catch (error) {
     event.checks[dayIndex] = !checked;
     renderApp();
     showMessage(error.message, "error");
-    setSyncStatus("Sync failed. The last change was rolled back.");
   }
 }
 
@@ -845,12 +891,11 @@ async function reorderEvents(sourceId, targetId) {
     await syncMonthToServer(elements.calendar.value);
     await loadRemoteData();
     renderApp();
-    setSyncStatus("Saved the new event order.");
   } catch (error) {
     showMessage(error.message, "error");
     await loadRemoteData();
     renderApp();
-    setSyncStatus("Reorder failed. Data was refreshed from the server.");
+    setSyncStatus("error");
   }
 }
 
@@ -885,9 +930,9 @@ async function importData(file) {
       await loadRemoteData();
       renderApp();
       showMessage("Imported tracker data successfully.", "success");
-      setSyncStatus("Imported JSON data into your account.");
     } catch (error) {
       showMessage(error.message || "Import failed. Please choose a valid JSON export.", "error");
+      setSyncStatus("error");
     }
   };
   reader.readAsText(file);
@@ -897,7 +942,7 @@ async function refreshCurrentMonth() {
   try {
     await loadRemoteData();
     renderApp();
-    setSyncStatus(`Loaded ${formatMonthLabel(elements.calendar.value)} from the cloud.`);
+    setSyncStatus("idle");
   } catch (error) {
     showMessage(error.message, "error");
   }
@@ -1039,13 +1084,15 @@ function bindEvents() {
       await addEvent(elements.eventName.value, elements.eventGoal.value);
     } catch (error) {
       showMessage(error.message, "error");
-      setSyncStatus("Could not save the new event.");
+      setSyncStatus("error");
     }
   });
 
   elements.themeToggle.addEventListener("click", () => {
     const nextTheme = document.body.classList.contains("dark") ? "light" : "dark";
-    setTheme(nextTheme);
+    // Fix 4: save selected theme when the toggle changes
+    applyTheme(nextTheme);
+    localStorage.setItem("schedule-tracker-theme", nextTheme);
     renderApp();
   });
 
@@ -1086,4 +1133,9 @@ async function initializeApp() {
   await initializeAuth();
 }
 
-initializeApp();
+// Fix 4: restore saved theme on page load before app initialization
+document.addEventListener("DOMContentLoaded", async function () {
+  const saved = localStorage.getItem("schedule-tracker-theme");
+  if (saved) applyTheme(saved);
+  await initializeApp();
+});

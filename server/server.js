@@ -11,7 +11,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const clientOrigin = process.env.CLIENT_ORIGIN;
+const clientOrigin = process.env.CLIENT_ORIGIN || "https://schedule-tracker-nu.vercel.app";
 
 function validateConfig() {
   if (!process.env.JWT_SECRET) {
@@ -21,13 +21,13 @@ function validateConfig() {
 
 validateConfig();
 
-if (clientOrigin) {
-  app.use(
-    cors({
-      origin: clientOrigin,
-    })
-  );
-}
+// Fix 5: confirm CORS allows the deployed Vercel frontend
+app.use(
+  cors({
+    origin: clientOrigin,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {
