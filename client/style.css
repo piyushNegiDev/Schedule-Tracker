@@ -231,6 +231,14 @@ input {
     box-shadow 0.2s ease;
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 5.5rem;
+}
+
 .field input:focus {
   outline: none;
   border-color: var(--accent);
@@ -238,10 +246,29 @@ input {
   transform: translateY(-1px);
 }
 
-#togglePassword {
+.password-toggle {
   position: absolute;
-  top: 42px;
-  right: 10px;
+  top: 50%;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  min-height: 32px;
+  padding: 0.3rem 0.7rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  background: var(--accent-soft);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .auth-tab,

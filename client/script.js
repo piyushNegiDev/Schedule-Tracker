@@ -20,6 +20,7 @@ const elements = {
   togglePassword: document.querySelector("#togglePassword"),
   signupEmail: document.querySelector("#signupEmail"),
   signupPassword: document.querySelector("#signupPassword"),
+  toggleSignupPassword: document.querySelector("#toggleSignupPassword"),
   authMessage: document.querySelector("#authMessage"),
   logoutBtn: document.querySelector("#logoutBtn"),
   userEmail: document.querySelector("#userEmail"),
@@ -1179,12 +1180,24 @@ const togglePassword = document.getElementById("togglePassword");
 elements.togglePassword.addEventListener("click", () => {
   if (elements.loginPassword.type === "password") {
     elements.loginPassword.type = "text";
-    elements.togglePassword.textContent = "🙈";
+    elements.togglePassword.textContent = "Hide";
   } else {
     elements.loginPassword.type = "password";
-    elements.togglePassword.textContent = "👁️";
+    elements.togglePassword.textContent = "Show";
   }
 });
+
+if (elements.toggleSignupPassword && elements.signupPassword) {
+  elements.toggleSignupPassword.addEventListener("click", () => {
+    if (elements.signupPassword.type === "password") {
+      elements.signupPassword.type = "text";
+      elements.toggleSignupPassword.textContent = "Hide";
+    } else {
+      elements.signupPassword.type = "password";
+      elements.toggleSignupPassword.textContent = "Show";
+    }
+  });
+}
 
 async function initializeAuth() {
   if (!appState.token) {

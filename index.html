@@ -53,14 +53,24 @@
             </label>
             <label class="field">
               <span>Password</span>
-              <input
-                id="loginPassword"
-                type="password"
-                minlength="8"
-                autocomplete="current-password"
-                required
-              />
-              <span id="togglePassword">👁️</span>
+              <div class="password-field">
+                <input
+                  id="loginPassword"
+                  type="password"
+                  minlength="8"
+                  autocomplete="current-password"
+                  required
+                />
+                <button
+                  id="togglePassword"
+                  class="password-toggle"
+                  type="button"
+                  aria-label="Show login password"
+                  aria-pressed="false"
+                >
+                  Show
+                </button>
+              </div>
             </label>
             <button class="primary-button" type="submit">Login</button>
           </form>
@@ -78,13 +88,24 @@
             </label>
             <label class="field">
               <span>Password</span>
-              <input
-                id="signupPassword"
-                type="password"
-                minlength="8"
-                autocomplete="new-password"
-                required
-              />
+              <div class="password-field">
+                <input
+                  id="signupPassword"
+                  type="password"
+                  minlength="8"
+                  autocomplete="new-password"
+                  required
+                />
+                <button
+                  id="toggleSignupPassword"
+                  class="password-toggle"
+                  type="button"
+                  aria-label="Show signup password"
+                  aria-pressed="false"
+                >
+                  Show
+                </button>
+              </div>
             </label>
             <button class="primary-button" type="submit">Signup</button>
           </form>
