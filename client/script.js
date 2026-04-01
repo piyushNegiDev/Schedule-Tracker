@@ -3,7 +3,10 @@ const THEME_STORAGE_KEY = "schedule-tracker-theme";
 const LEGACY_THEME_STORAGE_KEY = "trackerTheme";
 const LEGACY_STORAGE_KEY = "trackerData";
 const LEGACY_STORAGE_KEY_V2 = "trackerData.v2";
-const API_BASE_URL = String(window.APP_CONFIG?.API_BASE_URL || "/api").replace(/\/+$/, "");
+const API_BASE_URL = String(window.APP_CONFIG?.API_BASE_URL || "/api").replace(
+  /\/+$/,
+  "",
+);
 
 const elements = {
   authView: document.querySelector("#authView"),
@@ -14,6 +17,7 @@ const elements = {
   signupForm: document.querySelector("#signupForm"),
   loginEmail: document.querySelector("#loginEmail"),
   loginPassword: document.querySelector("#loginPassword"),
+  togglePassword: document.querySelector("#togglePassword"),
   signupEmail: document.querySelector("#signupEmail"),
   signupPassword: document.querySelector("#signupPassword"),
   authMessage: document.querySelector("#authMessage"),
@@ -76,7 +80,8 @@ function createMonthMap(months) {
 }
 
 function normalizeData(data) {
-  const months = data && typeof data === "object" && data.months ? data.months : {};
+  const months =
+    data && typeof data === "object" && data.months ? data.months : {};
 
   Object.keys(months).forEach((monthKey) => {
     const month = months[monthKey];
@@ -100,7 +105,10 @@ function migrateLegacyData(legacyData) {
     const events = Object.entries(monthEntries || {}).map(([name, checks]) => ({
       id: createId(),
       name,
-      goal: Math.max(1, Math.min(Array.isArray(checks) ? checks.length : 1, 20)),
+      goal: Math.max(
+        1,
+        Math.min(Array.isArray(checks) ? checks.length : 1, 20),
+      ),
       checks: Array.isArray(checks) ? checks.map(Boolean) : [],
     }));
 
@@ -175,7 +183,9 @@ async function apiRequest(path, options = {}) {
   }
 
   const contentType = response.headers.get("content-type") || "";
-  const payload = contentType.includes("application/json") ? await response.json() : null;
+  const payload = contentType.includes("application/json")
+    ? await response.json()
+    : null;
 
   if (!response.ok) {
     if (isWriteRequest) {
@@ -186,7 +196,10 @@ async function apiRequest(path, options = {}) {
 
   if (isWriteRequest) {
     setSyncStatus("saved");
-    appState.syncStatusTimeoutId = window.setTimeout(() => setSyncStatus("idle"), 3000);
+    appState.syncStatusTimeoutId = window.setTimeout(
+      () => setSyncStatus("idle"),
+      3000,
+    );
   }
 
   return payload;
@@ -213,7 +226,9 @@ function getDaysInMonth(monthKey) {
 }
 
 function resizeChecks(checks, days) {
-  const nextChecks = Array.isArray(checks) ? checks.slice(0, days).map(Boolean) : [];
+  const nextChecks = Array.isArray(checks)
+    ? checks.slice(0, days).map(Boolean)
+    : [];
   while (nextChecks.length < days) {
     nextChecks.push(false);
   }
@@ -311,12 +326,15 @@ function applyTheme(theme) {
   document.documentElement.classList.toggle("dark", isDark);
   document.body.setAttribute("data-theme", isDark ? "dark" : "light");
   localStorage.setItem(THEME_STORAGE_KEY, isDark ? "dark" : "light");
-  elements.themeToggle.querySelector(".theme-icon").textContent = isDark ? "Light" : "Dark";
+  elements.themeToggle.querySelector(".theme-icon").textContent = isDark
+    ? "Light"
+    : "Dark";
 }
 
 function initializeTheme() {
   const savedTheme =
-    localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    localStorage.getItem(THEME_STORAGE_KEY) ||
+    localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
   if (savedTheme) {
     applyTheme(savedTheme);
     return;
@@ -341,7 +359,9 @@ function getDailyProgress(month) {
         completed += 1;
       }
     });
-    progress[dayIndex] = Number(((completed / month.events.length) * 100).toFixed(1));
+    progress[dayIndex] = Number(
+      ((completed / month.events.length) * 100).toFixed(1),
+    );
   }
 
   return progress;
@@ -377,7 +397,7 @@ function calculateAnalytics(month) {
   const eventCount = month.events.length;
   const totalChecks = month.events.reduce(
     (sum, event) => sum + event.checks.filter(Boolean).length,
-    0
+    0,
   );
   const totalPossible = eventCount * days;
   const totalCompletion = totalPossible
@@ -386,7 +406,7 @@ function calculateAnalytics(month) {
   const weeklySlice = dailyProgress.slice(-7);
   const weeklyAverage = weeklySlice.length
     ? Math.round(
-        weeklySlice.reduce((sum, value) => sum + value, 0) / weeklySlice.length
+        weeklySlice.reduce((sum, value) => sum + value, 0) / weeklySlice.length,
       )
     : 0;
   const bestValue = dailyProgress.length ? Math.max(...dailyProgress) : 0;
@@ -394,8 +414,11 @@ function calculateAnalytics(month) {
   const goalPercent = eventCount
     ? Number(
         (
-          month.events.reduce((sum, event) => sum + (event.goal / days) * 100, 0) / eventCount
-        ).toFixed(1)
+          month.events.reduce(
+            (sum, event) => sum + (event.goal / days) * 100,
+            0,
+          ) / eventCount
+        ).toFixed(1),
       )
     : 0;
 
@@ -435,6 +458,10 @@ function createActionButton(label, className, action, eventId) {
   button.dataset.action = action;
   button.dataset.eventId = eventId;
   button.textContent = label;
+  button.setAttribute(
+    "aria-label",
+    `${label} ${action === "delete" ? "event" : "event name"}`,
+  );
   return button;
 }
 
@@ -483,8 +510,8 @@ function renderEvents(month) {
           <span class="pill">${eventStats.completed}/${days} done</span>
           <span class="pill">${eventStats.percentage}% complete</span>
           <span class="pill">Streak ${streak.current} day${
-      streak.current === 1 ? "" : "s"
-    }</span>
+            streak.current === 1 ? "" : "s"
+          }</span>
           <span class="pill">Best streak ${streak.best}</span>
         </div>
       </div>
@@ -493,7 +520,7 @@ function renderEvents(month) {
     const actionsWrap = infoCell.querySelector(".row-actions");
     actionsWrap.append(
       createActionButton("Edit", "", "edit", event.id),
-      createActionButton("Delete", "delete", "delete", event.id)
+      createActionButton("Delete", "delete", "delete", event.id),
     );
 
     row.appendChild(infoCell);
@@ -511,7 +538,10 @@ function renderEvents(month) {
       checkbox.dataset.eventId = event.id;
       checkbox.dataset.dayIndex = String(dayIndex);
       checkbox.checked = Boolean(event.checks[dayIndex]);
-      checkbox.setAttribute("aria-label", `${event.name} day ${dayIndex + 1} completion`);
+      checkbox.setAttribute(
+        "aria-label",
+        `${event.name} day ${dayIndex + 1} completion`,
+      );
 
       cell.appendChild(checkbox);
       row.appendChild(cell);
@@ -534,7 +564,9 @@ function renderSummary(month, analytics) {
   elements.weeklyInsight.textContent = analytics.eventCount
     ? "Average completion over the most recent 7 tracked days."
     : "Weekly average updates automatically once you begin tracking.";
-  elements.bestDay.textContent = analytics.bestDay ? `Day ${analytics.bestDay.day}` : "-";
+  elements.bestDay.textContent = analytics.bestDay
+    ? `Day ${analytics.bestDay.day}`
+    : "-";
   elements.bestDayInsight.textContent = analytics.bestDay
     ? `${analytics.bestDay.value}% completion was your strongest day.`
     : "Your best-performing day will appear after the first completed check-ins.";
@@ -542,7 +574,9 @@ function renderSummary(month, analytics) {
   elements.eventCountInsight.textContent = analytics.eventCount
     ? "Drag rows to reorder your focus areas."
     : "No events created for this month yet.";
-  const safeGoalPercent = Number.isFinite(analytics.goalPercent) ? analytics.goalPercent : 0;
+  const safeGoalPercent = Number.isFinite(analytics.goalPercent)
+    ? analytics.goalPercent
+    : 0;
   elements.goalBadge.textContent = `Goal line: ${Math.round(safeGoalPercent)}%`;
 }
 
@@ -644,7 +678,8 @@ function renderApp() {
 function isDuplicateEventName(name, ignoreId = "") {
   const normalized = name.trim().toLowerCase();
   return getCurrentMonthData().events.some(
-    (event) => event.id !== ignoreId && event.name.trim().toLowerCase() === normalized
+    (event) =>
+      event.id !== ignoreId && event.name.trim().toLowerCase() === normalized,
   );
 }
 
@@ -675,7 +710,7 @@ async function maybeMigrateLegacyData() {
   }
 
   const hasRemoteData = Object.values(appState.data.months).some(
-    (month) => Array.isArray(month.events) && month.events.length
+    (month) => Array.isArray(month.events) && month.events.length,
   );
 
   if (hasRemoteData) {
@@ -683,7 +718,7 @@ async function maybeMigrateLegacyData() {
   }
 
   const shouldImport = window.confirm(
-    "We found tracker data saved locally in this browser. Import it into your account?"
+    "We found tracker data saved locally in this browser. Import it into your account?",
   );
 
   if (!shouldImport) {
@@ -732,8 +767,10 @@ async function submitAuthForm(path, email, password) {
 
   setToken(response.token);
   showAuthMessage(
-    path.includes("signup") ? "Account created successfully." : "Logged in successfully.",
-    "success"
+    path.includes("signup")
+      ? "Account created successfully."
+      : "Logged in successfully.",
+    "success",
   );
   await handleAuthenticatedSession();
 }
@@ -754,7 +791,11 @@ async function addEvent(name, goal) {
   }
 
   const validatedGoal = Number(goal);
-  if (!Number.isFinite(validatedGoal) || validatedGoal < 1 || validatedGoal > days) {
+  if (
+    !Number.isFinite(validatedGoal) ||
+    validatedGoal < 1 ||
+    validatedGoal > days
+  ) {
     showMessage(`Monthly goal must be between 1 and ${days}.`, "error");
     return;
   }
@@ -805,13 +846,20 @@ async function updateEventName(eventId) {
     return;
   }
 
-  const nextGoal = window.prompt(`Edit monthly goal (1-${days})`, String(event.goal));
+  const nextGoal = window.prompt(
+    `Edit monthly goal (1-${days})`,
+    String(event.goal),
+  );
   if (nextGoal === null) {
     return;
   }
 
   const validatedGoal = Number(nextGoal);
-  if (!Number.isFinite(validatedGoal) || validatedGoal < 1 || validatedGoal > days) {
+  if (
+    !Number.isFinite(validatedGoal) ||
+    validatedGoal < 1 ||
+    validatedGoal > days
+  ) {
     showMessage(`Monthly goal must be between 1 and ${days}.`, "error");
     return;
   }
@@ -827,7 +875,10 @@ async function updateEventName(eventId) {
   event.name = response.event.name;
   event.goal = response.event.goal;
   renderApp();
-  showMessage(`Updated "${trimmedName}" with a ${event.goal}-day goal.`, "success");
+  showMessage(
+    `Updated "${trimmedName}" with a ${event.goal}-day goal.`,
+    "success",
+  );
 }
 
 async function deleteEvent(eventId) {
@@ -848,7 +899,9 @@ async function deleteEvent(eventId) {
 }
 
 async function toggleCheck(eventId, dayIndex, checked) {
-  const event = getCurrentMonthData().events.find((item) => item.id === eventId);
+  const event = getCurrentMonthData().events.find(
+    (item) => item.id === eventId,
+  );
   if (!event) {
     return;
   }
@@ -920,7 +973,9 @@ async function importData(file) {
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      const importedData = normalizeData(JSON.parse(String(reader.result || "")));
+      const importedData = normalizeData(
+        JSON.parse(String(reader.result || "")),
+      );
       appState.data = importedData;
 
       for (const monthKey of Object.keys(importedData.months)) {
@@ -931,7 +986,10 @@ async function importData(file) {
       renderApp();
       showMessage("Imported tracker data successfully.", "success");
     } catch (error) {
-      showMessage(error.message || "Import failed. Please choose a valid JSON export.", "error");
+      showMessage(
+        error.message || "Import failed. Please choose a valid JSON export.",
+        "error",
+      );
       setSyncStatus("error");
     }
   };
@@ -951,7 +1009,11 @@ async function refreshCurrentMonth() {
 function handleTableClick(event) {
   const target = event.target;
   if (target.matches(".checkbox-input")) {
-    toggleCheck(target.dataset.eventId, Number(target.dataset.dayIndex), target.checked);
+    toggleCheck(
+      target.dataset.eventId,
+      Number(target.dataset.dayIndex),
+      target.checked,
+    );
     return;
   }
 
@@ -1046,7 +1108,7 @@ function bindEvents() {
       await submitAuthForm(
         "/auth/login",
         elements.loginEmail.value.trim(),
-        elements.loginPassword.value
+        elements.loginPassword.value,
       );
       elements.loginForm.reset();
     } catch (error) {
@@ -1061,7 +1123,7 @@ function bindEvents() {
       await submitAuthForm(
         "/auth/signup",
         elements.signupEmail.value.trim(),
-        elements.signupPassword.value
+        elements.signupPassword.value,
       );
       elements.signupForm.reset();
     } catch (error) {
@@ -1089,7 +1151,9 @@ function bindEvents() {
   });
 
   elements.themeToggle.addEventListener("click", () => {
-    const nextTheme = document.body.classList.contains("dark") ? "light" : "dark";
+    const nextTheme = document.body.classList.contains("dark")
+      ? "light"
+      : "dark";
     // Fix 4: save selected theme when the toggle changes
     applyTheme(nextTheme);
     localStorage.setItem("schedule-tracker-theme", nextTheme);
@@ -1108,6 +1172,19 @@ function bindEvents() {
   elements.eventBody.addEventListener("drop", handleDrop);
   elements.eventBody.addEventListener("dragend", handleDragEnd);
 }
+
+const passwordInput = document.getElementById("password");
+const togglePassword = document.getElementById("togglePassword");
+
+elements.togglePassword.addEventListener("click", () => {
+  if (elements.loginPassword.type === "password") {
+    elements.loginPassword.type = "text";
+    elements.togglePassword.textContent = "🙈";
+  } else {
+    elements.loginPassword.type = "password";
+    elements.togglePassword.textContent = "👁️";
+  }
+});
 
 async function initializeAuth() {
   if (!appState.token) {
