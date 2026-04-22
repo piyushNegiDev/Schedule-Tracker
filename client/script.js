@@ -28,6 +28,7 @@ const elements = {
   calendar: document.querySelector("#calendar"),
   dateRow: document.querySelector("#dateRow"),
   eventBody: document.querySelector("#eventBody"),
+  tableScrollWrapper: document.querySelector(".table-scroll-wrapper"),
   eventForm: document.querySelector("#eventForm"),
   eventName: document.querySelector("#eventName"),
   eventGoal: document.querySelector("#eventGoal"),
@@ -552,6 +553,42 @@ function renderEvents(month) {
   });
 }
 
+function scrollTrackerToCurrentDay() {
+  const wrapper = elements.tableScrollWrapper;
+
+  if (!wrapper) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      if (!wrapper.isConnected || wrapper.clientWidth === 0) {
+        return;
+      }
+
+      const currentDayHeader = elements.dateRow.querySelector("th.current-day");
+
+      if (!currentDayHeader) {
+        wrapper.scrollLeft = 0;
+        return;
+      }
+
+      const stickyColumnWidth =
+        elements.dateRow.querySelector(".sticky-col")?.offsetWidth || 0;
+      const maxScrollLeft = Math.max(
+        0,
+        wrapper.scrollWidth - wrapper.clientWidth,
+      );
+      const nextScrollLeft = Math.min(
+        Math.max(currentDayHeader.offsetLeft - stickyColumnWidth - 24, 0),
+        maxScrollLeft,
+      );
+
+      wrapper.scrollLeft = nextScrollLeft;
+    });
+  });
+}
+
 function renderSummary(month, analytics) {
   const monthLabel = formatMonthLabel(elements.calendar.value);
   elements.monthSummary.textContent = `${monthLabel} | ${analytics.eventCount} event${
@@ -757,6 +794,7 @@ async function handleAuthenticatedSession() {
   await loadRemoteData();
   await maybeMigrateLegacyData();
   renderApp();
+  scrollTrackerToCurrentDay();
   setSyncStatus("idle");
 }
 
@@ -1001,6 +1039,7 @@ async function refreshCurrentMonth() {
   try {
     await loadRemoteData();
     renderApp();
+    scrollTrackerToCurrentDay();
     setSyncStatus("idle");
   } catch (error) {
     showMessage(error.message, "error");
@@ -1220,6 +1259,7 @@ async function initializeApp() {
   updateGoalInputRange();
   bindEvents();
   renderApp();
+  scrollTrackerToCurrentDay();
   await initializeAuth();
 }
 
